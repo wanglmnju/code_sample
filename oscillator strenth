@@ -1,0 +1,291 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Nov 27 11:14:33 2019
+
+@author: limin
+"""
+import math
+import numpy as np
+from numpy.linalg import *
+import copy
+
+numberk=64
+nr=15
+nm=numberk*nr
+na=5
+car=3
+
+dmk=[]
+wp=[]
+vp=[]
+for i in range(0,numberk):
+    dmr=np.loadtxt('DMRk'+str(i+1)+'.txt')
+    dmi=np.loadtxt('DMIk'+str(i+1)+'.txt')    
+    dm=dmr+1j*dmi
+    dmk.append(dm)
+    
+    w1,v1=eigh(dmk[i])
+    wp.append(w1)
+    vp.append(v1)
+    
+dmsc=np.zeros([numberk*nr,numberk*nr],dtype=complex)
+
+for i in range(0,numberk):
+    dmsc[i*nr:(i+1)*nr,i*nr:(i+1)*nr]=dmk[i]
+    
+np.savetxt('dmsc.txt',dmsc)
+w,v=eigh(dmsc)
+#idx0 = np.argsort(w)
+#w = w[idx0]
+#v = v[:,idx0]
+
+np.savetxt('eigenvalue.txt',w)
+np.savetxt('eigenvector.txt',v)
+
+k=np.loadtxt('kpoints.txt')
+r=np.loadtxt('rpoints_minus.txt')
+kt=np.transpose(k)
+rk0=np.dot(r,kt)
+PI=np.pi
+FP0=np.exp(1j*2*PI*rk0)
+FP0r=FP0.real
+
+
+fp0=np.zeros((numberk*nr,numberk*nr), dtype=complex)
+fp0i=np.zeros((numberk*nr,numberk*nr), dtype=complex)
+for i in range(0,numberk):
+    for j in range(0,numberk):
+        for n in range(0,nr):
+          fp0[i*15+n,j*15+n]=FP0[i,j]
+
+fp0i=inv(fp0)
+#np.savetxt('fp.txt',fp)
+fp0n=fp0/8.0  
+fp0in=inv(fp0n) 
+ 
+
+dm1=np.dot(fp0n,dmsc)
+dm=np.dot(dm1,fp0in)
+#dmr=dm.real
+wsc1,vsc1=eigh(dm)
+
+for i in range(0,nm):
+ if  abs(wsc1[i]-w[i]) < 1.0e-8 :
+  print(i,wsc1[i],w[i])
+
+
+#mass efect
+massdm=copy.deepcopy(dm)
+mf=math.sqrt(47.867/92.90638)
+massdm[3:6,:]=mf*massdm[3:6,:]
+massdm[:,3:6]=mf*massdm[:,3:6]
+
+wmass,vmass=eigh(massdm)
+
+## symmwrey operation, transformation matrix
+nsy=16
+npc=64
+#na=5
+nasc=npc*na
+nd=3
+TMD=nd*nasc
+
+TMSYx=np.zeros((nsy,TMD,TMD),dtype=float)
+TMSYy=np.zeros((nsy,TMD,TMD),dtype=float)
+TMSYz=np.zeros((nsy,TMD,TMD),dtype=float)
+
+SYx=np.array([[[1,0,0],[0,1,0],[0,0,1]],[[-1,0,0],[0,-1,0],[0,0,1]],
+             [[1,0,0],[0,-1,0],[0,0,-1]],[[-1,0,0],[0,1,0],[0,0,-1]],
+             [[1,0,0],[0,0,-1],[0,1,0]],[[1,0,0],[0,0,1],[0,-1,0]],
+             [[-1,0,0],[0,0,1],[0,1,0]],[[-1,0,0],[0,0,-1],[0,-1,0]],
+             [[-1,0,0],[0,-1,0],[0,0,-1]],[[1,0,0],[0,1,0],[0,0,-1]],
+             [[-1,0,0],[0,1,0],[0,0,1]],[[1,0,0],[0,-1,0],[0,0,1]],
+             [[-1,0,0],[0,0,1],[0,-1,0]],[[-1,0,0],[0,0,-1],[0,1,0]],
+             [[1,0,0],[0,0,-1],[0,-1,0]],[[1,0,0],[0,0,1],[0,1,0]]])
+             
+SYy=np.array([[[1,0,0],[0,1,0],[0,0,1]],[[-1,0,0],[0,-1,0],[0,0,1]],
+             [[1,0,0],[0,-1,0],[0,0,-1]],[[-1,0,0],[0,1,0],[0,0,-1]],
+             [[0,0,-1],[0,1,0],[1,0,0]],[[0,0,1],[0,1,0],[-1,0,0]],
+             [[0,0,1],[0,-1,0],[1,0,0]],[[0,0,-1],[0,-1,0],[-1,0,0]],
+             [[-1,0,0],[0,-1,0],[0,0,-1]],[[1,0,0],[0,1,0],[0,0,-1]],
+             [[-1,0,0],[0,1,0],[0,0,1]],[[1,0,0],[0,-1,0],[0,0,1]],
+             [[0,0,1],[0,-1,0],[-1,0,0]],[[0,0,-1],[0,-1,0],[1,0,0]],
+             [[0,0,-1],[0,1,0],[-1,0,0]],[[0,0,1],[0,1,0],[1,0,0]]])
+
+SYz=np.array([[[1,0,0],[0,1,0],[0,0,1]],[[-1,0,0],[0,-1,0],[0,0,1]],
+             [[1,0,0],[0,-1,0],[0,0,-1]],[[-1,0,0],[0,1,0],[0,0,-1]],
+             [[0,1,0],[-1,0,0],[0,0,1]],[[0,-1,0],[1,0,0],[0,0,1]],
+             [[0,1,0],[1,0,0],[0,0,-1]],[[0,-1,0],[-1,0,0],[0,0,-1]],
+             [[-1,0,0],[0,-1,0],[0,0,-1]],[[1,0,0],[0,1,0],[0,0,-1]],
+             [[-1,0,0],[0,1,0],[0,0,1]],[[1,0,0],[0,-1,0],[0,0,1]],
+             [[0,-1,0],[1,0,0],[0,0,-1]],[[0,1,0],[-1,0,0],[0,0,-1]],
+             [[0,-1,0],[-1,0,0],[0,0,1]],[[0,1,0],[1,0,0],[0,0,1]]])
+
+##input atomic position in SC
+Ti=np.loadtxt('Ti_minus.txt')
+APOS=np.zeros((nasc,nd),dtype=float)
+Eu=np.array([0.125,0.125,0.125])
+Ox=np.array([0.125,0.0,0.0])
+Oy=np.array([0.0,0.125,0.0])
+Oz=np.array([0.0,0.0,0.125])
+
+for i in range(0,npc):
+    APOS[i*5]=Ti[i]+Eu
+    APOS[i*5+1]=Ti[i]
+    APOS[i*5+2]=Ti[i]+Ox
+    APOS[i*5+3]=Ti[i]+Oy
+    APOS[i*5+4]=Ti[i]+Oz
+    
+for i in range(0,nasc):
+    for j in range(0,3):
+     if APOS[i,j]>0.5:
+        APOS[i,j]=APOS[i,j]-1.0
+
+##sort out the atom under the symmetry operations and 
+##construct the transformation matrix like x
+x = open('tmx.txt', 'w')   
+for i in range(0,nsy):
+#for i in range(1,2):
+ TMx=np.zeros((nasc,nasc,3,3),dtype=float)        
+ for j in range(0,nasc):    
+     TAx=np.dot(SYx[i],np.transpose(APOS[j]))
+     for k in range(0,nd):
+       if TAx[k]==0.5 :
+        TAx[k]=TAx[k]-1.0
+     for l in range(0,nasc):
+         if  np.array_equal(TAx,APOS[l]):
+           print(j,l,file=x)
+#           TMx[l,j]=SYx[i]
+           TMx[j,l]=SYx[i]
+ TMSYx[i]=np.swapaxes(TMx,1, 2).reshape(TMD,TMD)
+         
+                
+##project the part of transform like x
+PRx1=np.zeros((TMD,TMD),dtype=float)
+for i in range(0,nsy):
+#    print(SY[i,0,0])
+    PRx1=PRx1+SYx[i,0,0]*TMSYx[i]
+
+##sort the atom under the symmetry operations and 
+##construct the transformation matrix like y
+for i in range(0,nsy):
+#for i in range(1,2):
+ TMy=np.zeros((nasc,nasc,3,3),dtype=float)        
+ for j in range(0,nasc):    
+     TAy=np.dot(SYy[i],np.transpose(APOS[j]))
+     for k in range(0,nd):
+       if TAy[k]==0.5 :
+        TAy[k]=TAy[k]-1.0
+     for l in range(0,nasc):
+         if  np.array_equal(TAy,APOS[l]):
+#           print(j,l)
+           print(j,l,file=x)
+#           TMy[l,j]=SYy[i]
+           TMy[j,l]=SYy[i]
+ TMSYy[i]=np.swapaxes(TMy,1, 2).reshape(TMD,TMD)
+            
+                
+##project the part of transform like y
+PRy1=np.zeros((TMD,TMD),dtype=float)
+for i in range(0,nsy):
+#    print(SY[i,1,1])
+    PRy1=PRy1+SYy[i,1,1]*TMSYy[i]
+
+##sort the atom under the symmetry operations and 
+##construct the transformation matrix
+for i in range(0,nsy):
+#for i in range(1,2):
+ TMz=np.zeros((nasc,nasc,3,3),dtype=float)        
+ for j in range(0,nasc):    
+     TAz=np.dot(SYz[i],np.transpose(APOS[j]))
+     for k in range(0,nd):
+       if TAz[k]==0.5 :
+        TAz[k]=TAz[k]-1.0
+     for l in range(0,nasc):
+         if  np.array_equal(TAz,APOS[l]):
+#           print(j,l)
+           print(j,l,file=x)
+#           TMz[l,j]=SYz[i]
+           TMz[j,l]=SYz[i]
+ TMSYz[i]=np.swapaxes(TMz,1, 2).reshape(TMD,TMD)
+x.close()            
+                
+##project the part of transform like y
+PRz1=np.zeros((TMD,TMD),dtype=float)
+for i in range(0,nsy):
+#    print(SY[i,2,2])
+    PRz1=PRz1+SYz[i,2,2]*TMSYz[i]
+    
+pvsc1=np.zeros((nm,3*nm),dtype=float)
+pvscm=np.zeros((nm,3*nm),dtype=float)
+for j in range(0,nm):
+    pvsc1[:,3*j]=np.dot(PRx1,vsc1[:,j])
+    pvsc1[:,3*j+1]=np.dot(PRy1,vsc1[:,j])
+    pvsc1[:,3*j+2]=np.dot(PRz1,vsc1[:,j])
+    pvscm[:,3*j]=np.dot(PRx1,vmass[:,j])
+    pvscm[:,3*j+1]=np.dot(PRy1,vmass[:,j])
+    pvscm[:,3*j+2]=np.dot(PRz1,vmass[:,j])
+ 
+    
+    
+##normailization for perfect sc
+pvscn1=np.zeros((nm,3*nm),dtype=float)
+normsc=np.zeros(3*nm,dtype=float)
+for i in range(0,3*nm):
+  numsc=0.0
+  for j in range(0,nm):
+    numsc=numsc+pvsc1[j,i]*pvsc1[j,i]
+  normsc[i]=math.sqrt(numsc)
+  if normsc[i] > 1.0e-8 :
+#   print(i,normsc[i])
+   pvscn1[:,i]=pvsc1[:,i]/normsc[i]
+  else:
+   pvscn1[:,i]=pvsc1[:,i]
+
+
+##normailization for mass-defect cell
+pvscnm=np.zeros((nm,3*nm),dtype=float)
+normscm=np.zeros(3*nm,dtype=float)
+for i in range(0,3*nm):
+  numscm=0.0
+  for j in range(0,nm):
+    numscm=numscm+pvscm[j,i]*pvscm[j,i]
+  normscm[i]=math.sqrt(numscm)
+  if normscm[i] > 1.0e-8 :
+#   print(i,normscm[i])
+   pvscnm[:,i]=pvscm[:,i]/normscm[i]
+  else:
+   pvscnm[:,i]=pvscm[:,i]
+       
+     
+##oscillator strength
+mass=np.array([151.964,47.867,15.9994,15.9994,15.9994])
+
+bornx=np.array([2.71,7.62,-5.87,-2.21,-2.21])
+borny=np.array([2.71,7.62,-2.21,-5.87,-2.21])
+bornz=np.array([2.71,7.62,-2.21,-2.21,-5.87])
+
+factor=910.838*1.0/math.sqrt(float(npc))
+
+os=np.zeros((nm*3,3),dtype=float)
+for j in range(0,3*nm):
+   for i in range(0,na*numberk):
+    ma=i%5
+    os[j,0]=os[j,0]+bornx[ma]*1.0/math.sqrt(mass[ma])*pvscn1[3*i,j]
+    os[j,1]=os[j,1]+borny[ma]*1.0/math.sqrt(mass[ma])*pvscn1[3*i+1,j]
+    os[j,2]=os[j,2]+bornz[ma]*1.0/math.sqrt(mass[ma])*pvscn1[3*i+2,j]
+    
+osfa1=factor*abs(os)
+
+osm=np.zeros((nm*3,3),dtype=float)
+for j in range(0,3*nm):
+   for i in range(0,na*numberk):
+    ma=i%5
+    amass=mass[ma]
+    if i == 1 :
+        amass=92.90638
+    osm[j,0]=osm[j,0]+bornx[ma]*1.0/math.sqrt(amass)*pvscnm[3*i,j]
+    osm[j,1]=osm[j,1]+borny[ma]*1.0/math.sqrt(amass)*pvscnm[3*i+1,j]
+    osm[j,2]=osm[j,2]+bornz[ma]*1.0/math.sqrt(amass)*pvscnm[3*i+2,j]
+    
+osfam=factor*abs(osm)
